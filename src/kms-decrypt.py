@@ -43,9 +43,6 @@ def read_arguments():
     if not args.encrypted_string:
         parser.error("I mean you need to pass something to encrypt")
 
-    if not args.print_plaintext:
-        parser.error("Key to use to encrypt")
-
     return args
 
 

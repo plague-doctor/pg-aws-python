@@ -14,7 +14,19 @@ def aws_creds_expiry():
 
 
 ##############################################################################
+def read_default_key():
+    client = boto3.client('kms')
+    response = client.list_keys(
+        Limit=123
+        # Marker='string'
+    )
+    return(response['Keys'][0]['KeyId'])
+
+
+##############################################################################
 def read_arguments():
+    default_key = read_default_key()
+    print(default_key)
     parser = argparse.ArgumentParser("Encrypt plaintext with KMS")
     parser.add_argument(
         "-p",
@@ -25,7 +37,8 @@ def read_arguments():
     parser.add_argument(
         "-k",
         "--key-id",
-        required=True,
+        default=default_key,
+        # required=True,
         help='KMS key id to use'
     )
     args = parser.parse_args()
@@ -65,7 +78,9 @@ def main():
 
     # plaintext from the decrypted
     encrypted = base64.b64encode(encrypted['CiphertextBlob'])
+    print("..................:: Encrypted with key: {} ::..................".format(pass_args.key_id))
     print(str(encrypted, 'utf-8'))
+    print("..................................................................................................")
 
 
 ##############################################################################

@@ -75,22 +75,26 @@ def main():
 
     if command_line_args.print_plaintext:
         print(
-            " Are you alone ? No body staring at your monitor ? OK to print plaintext ? [y or n]",
+            "\n Are you alone? No body staring at your monitor? OK to print plaintext ? [y or n]",
             end='->  ',
             flush=True
         )
         user_says = sys.stdin.readline().rstrip('\n')
-        print("++++++++++++++++++++ Plain Text Alert +++++++++++++++++++++")
+        print("...............................:: PLAIN TEXT ::................................")
         if user_says == 'y':
             print(str(plaintext, 'utf-8'))
-            print("You should definitely consult someone or may be print it on a t-shirt ")
+            print("...............................................................................")
+            print("..:: You should definitely consult someone or may be print it on a t-shirt ::..")
         else:
-            print("hmmmm good call. Written to " + temp_file_location)
+            print("...............................................................................")
+            print("..::  hmmmm good call. Written to {}".format(temp_file_location))
             write_to_file(plaintext)
     else:
         # write plaintext to file.
-        print("Writing plaintext to {}".format(temp_file_location))
+        print("...............................................................................")
+        print("..::  hmmmm good call. Written to {}".format(temp_file_location))
         write_to_file(plaintext)
+
 
 ##############################################################################
 if __name__ == '__main__':

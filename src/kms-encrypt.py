@@ -3,9 +3,7 @@
 import boto3
 import argparse
 import sys
-import os
 import base64
-import time
 
 
 class color:
@@ -22,8 +20,8 @@ class color:
 
 
 ##############################################################################
-def aws_creds_expiry():
-    return time.strftime('%Y-%m-%d %a %H:%M:%S', time.localtime(int(os.environ['AWS_CREDS_EXPIRY'])))
+def error(msg):
+    print("{bold}{red}[ERROR]{reset} {text}".format(bold=color.BOLD, red=color.RED, reset=color.END, text=msg))
 
 
 ##############################################################################
@@ -37,19 +35,23 @@ def list_kms_keys():
         if ('CUSTOMER' in key_description['KeyMetadata']['KeyManager'] and
                 'Enabled' in key_description['KeyMetadata']['KeyState'] and
                 'ENCRYPT_DECRYPT' in key_description['KeyMetadata']['KeyUsage']):
-            print("KeyId: {bold}{key}{reset} is good to use.".format(bold=color.BOLD, key=key['KeyId'], reset=color.END))
+            print("KeyId: {bold}{key}{reset} is good to be used.".format(bold=color.BOLD, key=key['KeyId'], reset=color.END))
         else:
-            print("KeyId: {} is NOT good to use.".format(key['KeyId']))
+            print("KeyId: {} is NOT usable.".format(key['KeyId']))
 
 
 ##############################################################################
 def read_default_key():
     default_key = ''
     client = boto3.client('kms')
-    response = client.list_keys(
-        Limit=123
-        # Marker='string'
-    )
+
+    try:
+        response = client.list_keys(Limit=123)
+    except Exception as e:
+        error(str(e))
+        print("Are you logged in AWS? It doesn't look like... Check your credentials.")
+        sys.exit(1)
+
     for key in response['Keys']:
         key_description = client.describe_key(
             KeyId=key['KeyId']
@@ -69,7 +71,6 @@ def read_arguments():
     parser.add_argument(
         "-p",
         "--plaintext",
-        # required=True,
         help='Plaintext string to be encrypted'
     )
     parser.add_argument(
@@ -104,30 +105,20 @@ def main():
     # Init parser for command line args.
     pass_args = read_arguments()
 
-    # Get the session to get the region name;
-    session = boto3.session.Session()
-    aws_region = session.region_name
-
     # create the kms client to do the decryption
     kms_client = boto3.client('kms')
 
     # KMS decrypt
-    try:
-        encrypted = kms_client.encrypt(
-            KeyId=pass_args.key_id,
-            Plaintext=pass_args.plaintext
-        )
-    except Exception as e:
-        print(str(e))
-        print("You are trying to decrypt in: {}".format(aws_region))
-        print("Credentials expire at: {}".format(aws_creds_expiry()))
-        sys.exit(1)
+    encrypted = kms_client.encrypt(
+        KeyId=pass_args.key_id,
+        Plaintext=pass_args.plaintext
+    )
 
     # plaintext from the decrypted
     encrypted = base64.b64encode(encrypted['CiphertextBlob'])
     print("..................:: Encrypted with key: {} ::..................".format(pass_args.key_id))
     print(str(encrypted, 'utf-8'))
-    print("..................................................................................................")
+    print("...........................................................................:: plague-doctor ::....")
 
 
 ##############################################################################

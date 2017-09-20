@@ -3,15 +3,27 @@
 import boto3
 import base64
 import argparse
-import os
 import sys
-import time
+
 temp_file_location = "/tmp/plaintext"
 
 
+class color:
+    PURPLE = '\033[95m'
+    CYAN = '\033[96m'
+    DARKCYAN = '\033[36m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
+
 ##############################################################################
-def aws_creds_expiry():
-    return time.strftime('%Y-%m-%d %a %H:%M:%S', time.localtime(int(os.environ['AWS_CREDS_EXPIRY'])))
+def error(msg):
+    print("{bold}{red}[ERROR]{reset} {text}".format(bold=color.BOLD, red=color.RED, reset=color.END, text=msg))
 
 
 ##############################################################################
@@ -28,7 +40,6 @@ def read_arguments():
     parser.add_argument(
         "-e",
         "--encrypted-string",
-        required=True,
         help='KMS encrypted string that needs decrypting'
     )
     parser.add_argument(
@@ -51,24 +62,23 @@ def main():
 
     command_line_args = read_arguments()
 
-    # Get the session to get the region name;
-    session = boto3.session.Session()
-    aws_region = session.region_name
-
     # create the kms client to do the decrypttion
     kms_client = boto3.client('kms')
 
     # base64 decode into a cipher text blob
-    blob = base64.b64decode(command_line_args.encrypted_string)
+    try:
+        blob = base64.b64decode(command_line_args.encrypted_string)
+    except Exception as e:
+        error(str(e))
+        print("Hmmm... It doesn't look good... Are you trying to decrypt undecryptable? ;-)")
+        sys.exit(1)
 
     # KMS decrypt
     try:
-        aws_region = session.region_name
         decrypted = kms_client.decrypt(CiphertextBlob=blob)
     except Exception as e:
-        print(str(e))
-        print("You are trying to decrypt in: {}".format(aws_region))
-        print("Credentials expire at: {}".format(aws_creds_expiry()))
+        error(str(e))
+        print("Are you logged in AWS? It doesn't look like... Check your credentials.")
         sys.exit(1)
 
     plaintext = decrypted['Plaintext']
@@ -80,18 +90,18 @@ def main():
             flush=True
         )
         user_says = sys.stdin.readline().rstrip('\n')
-        print("...............................:: PLAIN TEXT ::................................")
+        print("..............................:: PLAIN TEXT ::..............................")
         if user_says == 'y':
             print(str(plaintext, 'utf-8'))
-            print("...............................................................................")
-            print("..:: You should definitely consult someone or may be print it on a t-shirt ::..")
+            print("......................................................:: plague-doctor ::...")
+            print("..:: You should definitely consult someone before print it on a t-shirt ::..")
         else:
-            print("...............................................................................")
+            print("......................................................:: plague-doctor ::...")
             print("..::  hmmmm good call. Written to {}".format(temp_file_location))
             write_to_file(plaintext)
     else:
         # write plaintext to file.
-        print("...............................................................................")
+        print("......................................................:: plague-doctor ::...")
         print("..::  hmmmm good call. Written to {}".format(temp_file_location))
         write_to_file(plaintext)
 

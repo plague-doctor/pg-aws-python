@@ -8,40 +8,87 @@ import base64
 import time
 
 
+class color:
+    PURPLE = '\033[95m'
+    CYAN = '\033[96m'
+    DARKCYAN = '\033[36m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
+
 ##############################################################################
 def aws_creds_expiry():
     return time.strftime('%Y-%m-%d %a %H:%M:%S', time.localtime(int(os.environ['AWS_CREDS_EXPIRY'])))
 
 
 ##############################################################################
+def list_kms_keys():
+    client = boto3.client('kms')
+    response = client.list_keys()
+    for key in response['Keys']:
+        key_description = client.describe_key(
+            KeyId=key['KeyId']
+            )
+        if ('CUSTOMER' in key_description['KeyMetadata']['KeyManager'] and
+                'Enabled' in key_description['KeyMetadata']['KeyState'] and
+                'ENCRYPT_DECRYPT' in key_description['KeyMetadata']['KeyUsage']):
+            print("KeyId: {bold}{key}{reset} is good to use.".format(bold=color.BOLD, key=key['KeyId'], reset=color.END))
+        else:
+            print("KeyId: {} is NOT good to use.".format(key['KeyId']))
+
+
+##############################################################################
 def read_default_key():
+    default_key = ''
     client = boto3.client('kms')
     response = client.list_keys(
         Limit=123
         # Marker='string'
     )
-    return(response['Keys'][0]['KeyId'])
+    for key in response['Keys']:
+        key_description = client.describe_key(
+            KeyId=key['KeyId']
+            )
+        if ('CUSTOMER' in key_description['KeyMetadata']['KeyManager'] and
+                'Enabled' in key_description['KeyMetadata']['KeyState'] and
+                'ENCRYPT_DECRYPT' in key_description['KeyMetadata']['KeyUsage']):
+            default_key = key['KeyId']
+            break
+    return(default_key)
 
 
 ##############################################################################
 def read_arguments():
     default_key = read_default_key()
-    print(default_key)
     parser = argparse.ArgumentParser("Encrypt plaintext with KMS")
     parser.add_argument(
         "-p",
         "--plaintext",
-        required=True,
+        # required=True,
         help='Plaintext string to be encrypted'
     )
     parser.add_argument(
         "-k",
         "--key-id",
         default=default_key,
-        # required=True,
         help='KMS key id to use'
     )
+    parser.add_argument(
+        "-K",
+        "--list-keys",
+        action='store_true',
+        help='List available keys in KMS'
+    )
     args = parser.parse_args()
+
+    if args.list_keys:
+        list_kms_keys()
+        sys.exit(0)
 
     if not args.plaintext:
         parser.error("Plaintext that needs encryption.")
